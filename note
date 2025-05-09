@@ -1,0 +1,401 @@
+       
+       PERFORM WITH TEST AFTER UNTIL Wtrouver = 0 
+              DISPLAY "Entrez l'ID du bénévole : "
+              ACCEPT Wid
+              MOVE Wid TO fbe_id
+              READ fbe
+              INVALID KEY DISPLAY "inexistant"
+                          MOVE 0 To Wtrouver
+              NOT INVALID KEY DISPLAY fbe_id
+                              MOVE 1 To Wtrouver
+              END-READ
+       END-PERFORM
+       
+       
+       
+       
+       
+       //cobc -free -x benevoles.cob
+       //cobc -free -x benevoles.cob
+       
+       
+       
+       
+       
+              OPEN INPUT fbe
+       MOVE 0 TO Wfin
+       PERFORM WITH TEST AFTER UNTIL Wfin = 1
+              READ fbe NEXT
+                     AT END MOVE 1 TO Wfin 
+                     NOT AT END 
+                            IF fbe_id > Wid THEN
+                                   MOVE fbe_id TO Wid 
+                            END-IF
+              END-READ
+       END-PERFORM  
+       CLOSE fbe
+       
+       
+              Init_increment
+       OPEN I-O increment
+          READ increment
+          COMPUTE Wid = autoinc_num + 1
+          MOVE Wid TO autoinc_num
+          REWRITE autoinc
+       CLOSE increment.
+
+///////////////////////////////////////////////////////
+IDENTIFICATION DIVISION.
+PROGRAM-ID. athletes.
+ENVIRONMENT DIVISION.
+INPUT-OUTPUT SECTION.
+FILE-CONTROL.
+
+       select fbe assign to "benevoles.dat"
+       organization indexed
+       access mode is dynamic
+       record key is fbe_id
+       alternate record key is fbe_idGroupe WITH DUPLICATES
+       alternate record key is fbe_role WITH DUPLICATES
+       file status is cr_fbe.
+       
+       select increment assign to "autoinc.dat"
+       organization indexed
+       access mode is dynamic
+       record key is autoinc_num
+       file status is cr_autoinc.
+
+DATA DIVISION.
+FILE SECTION.
+
+
+
+FD fbe.
+       01 tamp_fbe.
+              02 fbe_id PIC 9(4).
+              02 fbe_idGroupe PIC 9(4).
+              02 fbe_role PIC X(30).
+              02 fbe_nom PIC X(30).
+              02 fbe_prenom PIC X(30).
+              02 fbe_age PIC 9(3).
+              02 fbe_mdp PIC X(30).
+              
+FD increment.
+       01 autoinc.
+           02 autoinc_num PIC 9(4).
+
+              
+WORKING-STORAGE SECTION.
+       77 cr_fbe PIC 9(2).
+       77 cr_autoinc PIC 9(2).
+       77 Wfin PIC 9.
+       77 Wid PIC 9(4).
+       77 WidGroupe PIC 9(4).
+       77 Wrole PIC X(30).
+       77 Wnom PIC X(30).
+       77 Wprenom PIC X(30).
+       77 Wage PIC 9(3).
+       77 Wmdp PIC X(30).
+       77 Wtrouver PIC 9.
+       
+PROCEDURE DIVISION.
+OPEN I-O increment.
+IF cr_autoinc = 35
+       OPEN OUTPUT increment
+       MOVE 0 TO autoinc_num
+       WRITE autoinc
+END-IF
+CLOSE increment.
+OPEN I-O fbe
+IF cr_fbe=35 THEN
+OPEN OUTPUT fbe
+END-IF
+CLOSE fbe
+PERFORM Ajout_benevoles
+PERFORM Affichage_benevoles
+PERFORM Suppression_benevoles
+STOP RUN.
+
+       Ajout_benevoles.
+       OPEN INPUT increment
+       READ increment
+          COMPUTE Wid = autoinc_num + 1
+          MOVE Wid TO autoinc_num
+          REWRITE autoinc
+       CLOSE increment
+       
+       DISPLAY "Création d'un nouveau bénévole"
+       
+       OPEN INPUT fbe
+       MOVE 0 TO Wtrouver 
+       CLOSE fbe 
+       DISPLAY "Entrez l'ID du groupe : "
+       ACCEPT WidGroupe
+       DISPLAY "Entrez le rôle : "
+       ACCEPT Wrole
+       DISPLAY "Entrez le nom : "
+       ACCEPT Wnom
+       DISPLAY "Entrez le prénom : "
+       ACCEPT Wprenom
+       MOVE 0 TO Wtrouver
+       PERFORM WITH TEST AFTER UNTIL Wtrouver = 0
+              DISPLAY "Entrez l'âge : "
+              ACCEPT Wage
+              IF Wage>0
+                     MOVE 0 TO Wtrouver
+              END-IF
+       END-PERFORM
+       DISPLAY "Entrez le mot de passe : "
+       ACCEPT Wmdp
+       MOVE Wid TO fbe_id
+       MOVE WidGroupe TO fbe_idGroupe
+       MOVE Wrole TO fbe_role
+       MOVE Wnom TO fbe_nom
+       MOVE Wprenom TO fbe_prenom
+       MOVE Wage TO fbe_age
+       
+       OPEN EXTEND fbe
+       WRITE tamp_fbe
+       END-WRITE
+       CLOSE fbe.
+       
+       Affichage_benevoles.
+       OPEN INPUT fbe
+       MOVE 0 TO Wfin
+       PERFORM WITH TEST AFTER UNTIL Wfin = 1
+              READ fbe NEXT
+              AT END MOVE 1 TO Wfin 
+              NOT AT END
+                     DISPLAY "numéro:"fbe_id
+                     DISPLAY "nom :"fbe_nom
+              END-READ
+       END-PERFORM  
+       CLOSE fbe.
+       
+       Suppression_benevoles.
+       OPEN I-O fbe
+       MOVE 0 TO Wtrouver
+       PERFORM WITH TEST AFTER UNTIL Wtrouver = 1
+              DISPLAY "Entrez l'ID du bénévole à supprimer : "
+              ACCEPT Wid
+              MOVE Wid TO fbe_id
+              READ fbe
+                     INVALID KEY
+                            DISPLAY "Le bénévole n'existe pas."
+                            MOVE 1 TO Wtrouver
+                     NOT INVALID KEY
+                            DISPLAY "Le bénévole a été supprimé."
+                            DELETE fbe
+                            MOVE 1 TO Wtrouver
+              END-READ
+       END-PERFORM
+       CLOSE fbe.
+///////////////////////////////
+           IDENTIFICATION DIVISION.
+              PROGRAM-ID. benevoles.
+              ENVIRONMENT DIVISION.
+              INPUT-OUTPUT SECTION.
+              FILE-CONTROL.
+
+                  select fbe assign to "benevoles.dat"
+                  organization indexed
+                  access mode is dynamic
+                  record key is fbe_id
+                  alternate record key is fbe_idGroupe WITH DUPLICATES
+                  alternate record key is fbe_role WITH DUPLICATES
+                  file status is cr_fbe.
+
+                  select increment assign to "autoinc.dat"
+                  organization indexed
+                  access mode is dynamic
+                  record key is autoinc_num
+                  file status is cr_autoinc.
+
+              DATA DIVISION.
+              FILE SECTION.
+
+              FD fbe.
+              01 tamp_fbe.
+                  02 fbe_id PIC 9(4).
+                  02 fbe_idGroupe PIC 9(4).
+                  02 fbe_role PIC X(30).
+                  02 fbe_nom PIC X(30).
+                  02 fbe_prenom PIC X(30).
+                  02 fbe_age PIC 9(3).
+                  02 fbe_mdp PIC X(30).
+
+              FD increment.
+              01 autoinc.
+                  02 autoinc_num PIC 9(4).
+
+              WORKING-STORAGE SECTION.
+              77 cr_fbe PIC 9(2).
+              77 cr_autoinc PIC 9(2).
+              77 Wfin PIC 9.
+              77 Wid PIC 9(4).
+              77 WidGroupe PIC 9(4).
+              77 Wrole PIC X(30).
+              77 Wnom PIC X(30).
+              77 Wprenom PIC X(30).
+              77 Wage PIC 9(3).
+              77 Wmdp PIC X(30).
+              77 Wtrouver PIC 9.
+
+              PROCEDURE DIVISION.
+              OPEN I-O increment
+                  IF cr_autoinc = 35
+                      MOVE 0 TO autoinc_num
+                      WRITE autoinc
+                      CLOSE increment
+                  END-IF
+
+              OPEN I-O fbe
+                  IF cr_fbe = 35
+                      OPEN OUTPUT fbe
+                      CLOSE fbe
+                  END-IF
+
+              PERFORM Ajout_benevoles
+              PERFORM Affichage_benevoles
+              PERFORM Suppression_benevoles
+              CLOSE fbe
+              STOP RUN.
+
+              Ajout_benevoles.
+              OPEN INPUT increment
+              READ increment
+                  COMPUTE Wid = autoinc_num + 1
+                  MOVE Wid TO autoinc_num
+                  REWRITE autoinc
+              CLOSE increment
+
+
+              ------------------------------
+              
+           SEARCH_BEN.
+       DISPLAY 'Entrez votre identifiant:'
+       ACCEPT fbe_id.
+       OPEN I-O fbe.
+       START fbe KEY IS EQUAL TO fbe_id.
+       READ fbe NEXT 
+       AT END
+          DISPLAY 'Aucun bénévole trouvé avec cet identifiant.'
+       NOT AT END
+          MOVE fbe_idGroupe TO fdi_idGroupe.
+       CLOSE fbe.
+   
+       OPEN I-O fdistributions.
+       START fdistributions KEY IS EQUAL TO fdi_idGroupe.
+       READ fdistributions NEXT RECORD
+       AT END
+          DISPLAY 'Aucune distribution trouvée pour ce groupe.'
+       NOT AT END
+          DISPLAY 'Le bénévole doit participer à la distribution ' fdi_id.
+       CLOSE fdistributions.
+       
+           PROCEDURE DIVISION.
+       DISPLAY 'Entrez votre identifiant et le mois en question (format AAAAMM):'
+       ACCEPT fbe_id.
+       ACCEPT fdi_date.
+       OPEN I-O fbe.
+       START fbe KEY IS EQUAL TO fbe_id.
+       READ fbe NEXT RECORD 
+       AT END
+          DISPLAY 'Aucun bénévole trouvé avec cet identifiant.'
+       NOT AT END
+          MOVE fbe_idGroupe TO fdi_idGroupe.
+       CLOSE fbe.
+   
+       OPEN I-O fdistributions.
+       MOVE 0 TO autoinc_num.
+       START fdistributions KEY IS EQUAL TO fdi_idGroupe.
+       PERFORM UNTIL fdi_date < (fdi_date - 100)
+          READ fdistributions NEXT RECORD 
+          AT END
+             EXIT
+          NOT AT END
+             IF fdi_date >= (fdi_date - 100) AND fdi_date <= fdi_date 
+                ADD 1 TO autoinc_num.
+       END-PERFORM.
+       CLOSE fdistributions.
+       DISPLAY 'Nombre de distributions dans le mois: ' autoinc_num.
+
+          PROCEDURE DIVISION.
+       DISPLAY 'Entrez votre identifiant et l'ID de la distribution:'
+       ACCEPT fbe_id.
+       ACCEPT fdi_id.
+       OPEN I-O fbe.
+       START fbe KEY IS EQUAL TO fbe_id.
+       READ fbe NEXT RECORD 
+       AT END
+          DISPLAY 'Aucun bénévole trouvé avec cet identifiant.'
+       NOT AT END
+          MOVE fbe_idGroupe TO fdi_idGroupe.
+       CLOSE fbe.
+   
+       OPEN I-O fdistributions.
+       START fdistributions KEY IS EQUAL TO fdi_id.
+       READ fdistributions NEXT RECORD
+       AT END
+          DISPLAY 'Aucune distribution trouvée avec cet identifiant.'
+       NOT AT END
+       >*------ADMIN
+              PROCEDURE DIVISION.
+       CENTER-MOST-DELIVERED.
+           MOVE ZEROS TO fdi_id, fce_id
+           PERFORM UNTIL fdi_id > HIGHEST-GROUP-ID
+               START fdistributions KEY IS GREATER THAN OR EQUAL TO fdi_id
+                   INVALID KEY
+                       GO TO END-CENTER-MOST-DELIVERED
+                   NOT INVALID KEY
+                       READ fdistributions NEXT RECORD
+                           AT END
+                               GO TO END-CENTER-MOST-DELIVERED
+                           NOT AT END
+                               IF fdi_idGroupe = DESIRED-GROUP-ID AND fdi_quantite > HIGHEST-DELIVERY
+                                   MOVE fdi_quantite TO HIGHEST-DELIVERY
+                                   MOVE fdi_produit TO fce_id
+                               END-IF
+                       END-READ
+               END-START
+               ADD 1 TO fdi_id
+           END-PERFORM
+           DISPLAY "The center most delivered by group " DESIRED-GROUP-ID " is " fce_id
+       END-CENTER-MOST-DELIVERED.
+       EXIT.
+
+              PROCEDURE DIVISION.
+       AVERAGE-AGE.
+           MOVE ZEROS TO fbe_id, AVERAGE-AGE, TOTAL-AGE, TOTAL-MEMBERS
+           PERFORM UNTIL fbe_id > HIGHEST-MEMBER-ID
+               START benevoles KEY IS GREATER THAN OR EQUAL TO fbe_id
+                   INVALID KEY
+                       GO TO END-AVERAGE-AGE
+                   NOT INVALID KEY
+                       READ benevoles NEXT RECORD
+                           AT END
+                               GO TO END-AVERAGE-AGE
+                           NOT AT END
+                               IF fbe_idGroupe = DESIRED-GROUP-ID
+                                   ADD fbe_age TO TOTAL-AGE
+                                   ADD 1 TO TOTAL-MEMBERS
+                               END-IF
+                       END-READ
+               END-START
+               ADD 1 TO fbe_id
+           END-PERFORM
+           COMPUTE AVERAGE-AGE = TOTAL-AGE / TOTAL-MEMBERS
+           DISPLAY "The average age in group " DESIRED-GROUP-ID " is " AVERAGE-AGE
+       END-AVERAGE-AGE.
+       EXIT.
+
+
+                           WidUtilisateur
+                    Wmot_de_passe
+                    WidUtilisateurConnecte
+                    WroleUtilisateurConnecte
+                    Wchoix
+                    WchoixM
+                    WidSceneUtilisateurConnecte
+                    WidProduit
+                    Wquantite
